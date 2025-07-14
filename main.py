@@ -4,7 +4,7 @@ import json
 import os
 
 # إعدادات البوت
-TOKEN = "8051383197:AAHN18riDFBX_b-QW4tBjFYPdxT8YqT5oDk"توكن_البوتي
+TOKEN = "8051383197:AAHN18riDFBX_b-QW4tBjFYPdxT8YqT5oDk" 
 CHANNEL_ID = "@CryptoShip95"
 LAST_PRICE_FILE = "last_btc_price.json"
 PRICE_CHANGE_THRESHOLD = 0.01  # 1%
