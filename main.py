@@ -4,10 +4,10 @@ import json
 import os
 
 # إعدادات البوت
-TOKEN = "8051383197:AAHN18riDFBX_b-QW4tBjFYPdxT8YqT5oDk"
+TOKEN = "8051383197:AAHN18riDFBX_b-QW4tBjFYPdxT8YqT5oDk"توكن_البوتي
 CHANNEL_ID = "@CryptoShip95"
 LAST_PRICE_FILE = "last_btc_price.json"
-PRICE_CHANGE_THRESHOLD = 0.005  # 1%
+PRICE_CHANGE_THRESHOLD = 0.01  # 1%
 
 app = Flask(__name__)
 
@@ -24,7 +24,7 @@ def load_last_price():
 
 def get_btc_price():
     url = "https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd"
-    response = requests.get(url)
+    response = requests.get(url, timeout=10)
     data = response.json()
     return float(data["bitcoin"]["usd"])
 
@@ -57,4 +57,5 @@ def run_bot():
         return "⏳ لا تغيير ملحوظ في السعر."
 
 if __name__ == '__main__':
-    app.run()
+    port = int(os.environ.get('PORT', 10000))  # يستخدم منفذ Render
+    app.run(host='0.0.0.0', port=port)
