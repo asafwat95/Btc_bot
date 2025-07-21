@@ -1,42 +1,39 @@
 import requests
+import json
 
-client_id = '[4KbhRnQjmYMbKADkbsiq9Ux3r2iJnM3sMp5HbNvaKAjHWLnylbnrTHtrsrEBYHvB]'
-client_secret = '[NgsGhPiH7IRNuGGA0NxiH9AxURL1htz6LokCH0jo0pyyCjIdsIyuFjkWASvtnMhW]'
-redirect_uri = 'http://localhost/'
+# توكن البوت ومعرف القناة
+bot_token = '7974713193:AAGaE-sjvB7kTAt_yg6Mp68_xE5lC_czdA8'
+channel_id = '@Cryptoships95'
 
-# Use the same scope as the one in the Cryptohopper app console
-scope = 'read,notifications,manage,trade'
+# توكن الدخول إلى Cryptohopper
+access_token = '[m4nbgitohefc4ywwfq9v57yqxpaj0uyptekqw37v]'
 
-authorize_url = 'https://www.cryptohopper.com/oauth2/authorize'
-code_uri = authorize_url + '?client_id=' + client_id + '&response_type=code&scope=' + scope + '&state=any&redirect_uri=' + redirect_uri
+# API الخاص بـ Cryptohopper
+base_url = 'https://api.cryptohopper.com/v1/'
+endpoint = 'hopper'
+uri = base_url + endpoint
 
-# The user logs in, accepts your client authentication request
-requests.get(code_uri)
+# الهيدر فيه التوكن
+headers = {
+    'access-token': access_token
+}
 
-# The user will be redirected to the redirect_uri with the code as GET parameter
-# ex: http://localhost/auth?code=123456789
-code = '123456789' # Put the code you got here
+# إرسال طلب لجلب بيانات hoppers
+response = requests.get(uri, headers=headers)
+data = response.json()
 
-token_url = 'https://www.cryptohopper.com/oauth2/token'
+# تحويل البيانات إلى نص منسق (اختياري)
+formatted_data = json.dumps(data, indent=2)
 
-#Grab that code and exchange it for an `access_token`
-access_token = requests.post(
-    token_url,
-    data={
-        'grant_type': 'authorization_code',
-        'code': code,
-        'client_id': client_id,
-        'client_secret': client_secret,
-        'redirect_uri': redirect_uri
-    }
-)
+# إرسال البيانات لقناة تيليجرام
+telegram_url = f'https://api.telegram.org/bot{bot_token}/sendMessage'
+payload = {
+    'chat_id': channel_id,
+    'text': f'📊 Hopper Data:\n<pre>{formatted_data}</pre>',
+    'parse_mode': 'HTML'
+}
 
-print(access_token.json())
-# Response:
-# {
-# 'access_token': '[ACCESS TOKEN]', 
-# 'expires_in': 31556952, 
-# 'token_type': 'Bearer', 
-# 'scope': 'read,notifications,manage,trade', 
-# 'refresh_token': '[REFRESH TOKEN]'
-# }
+telegram_response = requests.post(telegram_url, data=payload)
+
+# طباعة نتيجة الإرسال (اختياري)
+print(telegram_response.json())
