@@ -1,4 +1,5 @@
-from telegram.ext import Updater, MessageHandler, Filters
+from telegram.ext import Application, MessageHandler, filters # تم تغيير الاستيرادات
+
 import json
 
 # ===== إعدادات البوت =====
@@ -25,6 +26,7 @@ def is_trade_message(text):
     )
 
 # التعامل مع الرسائل
+# لاحظ أن update و context لم يتغيرا في البارامترات
 def handle_message(update, context):
     message = update.message.text
     if message and is_trade_message(message):
@@ -37,14 +39,16 @@ def handle_message(update, context):
 
 # تشغيل البوت
 def main():
-    updater = Updater(BOT_TOKEN, use_context=True)
-    dp = updater.dispatcher
+    # هذا السطر تغير بشكل كبير: استخدام Application.builder()
+    application = Application.builder().token(BOT_TOKEN).build()
 
-    dp.add_handler(MessageHandler(Filters.text & ~Filters.command, handle_message))
+    # إضافة الـ handler: لاحظ استخدام filters.TEXT و filters.COMMAND (حرف صغير)
+    application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
 
     print("✅ Bot is listening for Cryptohopper messages...")
-    updater.start_polling()
-    updater.idle()
+    # بدء تشغيل البوت: run_polling بدلاً من start_polling و idle
+    application.run_polling() 
+    # يمكنك استخدام application.run_forever() إذا كنت تفضل ذلك، لكن run_polling() كافية هنا
 
 if __name__ == '__main__':
     main()
