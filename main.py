@@ -1,8 +1,8 @@
 import requests
 
 # بيانات تطبيقك من Cryptohopper Developer Console
-client_id = '[9gZgRFZrzj5hh4y0tfNzs1gaozVYNl8BSBEhtNyDiyjevUOQv21QmGBrsCcEgvZQ]'
-client_secret = '[m719DnC6BjTYNaOhBEHJURe2RGMFQeigrakQjyOfL6UfPmKh6Sjs87BhWcXVwFbp]'
+client_id = '[4KbhRnQjmYMbKADkbsiq9Ux3r2iJnM3sMp5HbNvaKAjHWLnylbnrTHtrsrEBYHvB]'
+client_secret = '[NgsGhPiH7IRNuGGA0NxiH9AxURL1htz6LokCH0jo0pyyCjIdsIyuFjkWASvtnMhW]'
 redirect_uri = 'http://localhost/'
 
 # قناة تيليجرام
