@@ -105,7 +105,7 @@ def main():
                 last_no_orders_sent_time = time.time()
 
 
-        time.sleep(60)  # الانتظار لمدة دقيقة واحدة قبل التحقق مرة أخرى
+        time.sleep(10)  # الانتظار لمدة دقيقة واحدة قبل التحقق مرة أخرى
 
 if __name__ == '__main__':
     main()
