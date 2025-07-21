@@ -1,61 +1,50 @@
-from flask import Flask
-import requests
+from telegram.ext import Updater, MessageHandler, Filters
 import json
-import os
 
-# إعدادات البوت
-TOKEN = "8051383197:AAHN18riDFBX_b-QW4tBjFYPdxT8YqT5oDk" 
-CHANNEL_ID = "@CryptoShip95"
-LAST_PRICE_FILE = "last_btc_price.json"
-PRICE_CHANGE_THRESHOLD = 0.0001  # 1%
+# ===== إعدادات البوت =====
+BOT_TOKEN = '7974713193:AAGaE-sjvB7kTAt_yg6Mp68_xE5lC_czdA8'  # استبدل هذا بالتوكن من BotFather
+TARGET_CHAT_ID = '@Cryptoships95'  # مثال: @my_channel أو -123456789 للمجموعة
 
-app = Flask(__name__)
+# ===== ملف حفظ العمليات =====
+LOG_FILE = 'trades.json'
 
-def save_last_price(price):
-    with open(LAST_PRICE_FILE, 'w') as f:
-        json.dump({'last_price': price}, f)
+# تحميل السجل الحالي إن وُجد
+try:
+    with open(LOG_FILE, 'r') as f:
+        trades = json.load(f)
+except FileNotFoundError:
+    trades = []
 
-def load_last_price():
-    if os.path.exists(LAST_PRICE_FILE):
-        with open(LAST_PRICE_FILE, 'r') as f:
-            data = json.load(f)
-            return data.get('last_price')
-    return None
+# التحقق إذا كانت الرسالة عملية تداول
+def is_trade_message(text):
+    text = text.lower()
+    return (
+        'buy order has been placed' in text or
+        'sell order has been placed' in text or
+        'hop completed on market' in text
+    )
 
-def get_btc_price():
-    url = "https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd"
-    response = requests.get(url, timeout=10)
-    data = response.json()
-    return float(data["bitcoin"]["usd"])
+# التعامل مع الرسائل
+def handle_message(update, context):
+    message = update.message.text
+    if message and is_trade_message(message):
+        trades.append(message)
+        with open(LOG_FILE, 'w') as f:
+            json.dump(trades, f, indent=2)
 
-def send_message(text):
-    url = f"https://api.telegram.org/bot{TOKEN}/sendMessage"
-    requests.post(url, data={"chat_id": CHANNEL_ID, "text": text})
+        # إعادة إرسال الرسالة
+        context.bot.send_message(chat_id=TARGET_CHAT_ID, text=message)
 
-@app.route('/')
-def run_bot():
-    current_price = get_btc_price()
-    last_price = load_last_price()
+# تشغيل البوت
+def main():
+    updater = Updater(BOT_TOKEN, use_context=True)
+    dp = updater.dispatcher
 
-    if last_price is None:
-        message = f"📢 سعر البيتكوين الأولي: ${current_price:,.2f} 💰\nتم التحديث تلقائيًا عبر CryptoShip 🚢"
-        send_message(message)
-        save_last_price(current_price)
-        return "✅ Sent Initial Price"
+    dp.add_handler(MessageHandler(Filters.text & ~Filters.command, handle_message))
 
-    change = abs((current_price - last_price) / last_price)
-    if change >= PRICE_CHANGE_THRESHOLD:
-        change_type = "📈 ارتفع" if current_price > last_price else "📉 انخفض"
-        message = (
-            f"📢 سعر البيتكوين الآن: ${current_price:,.2f} 💰\n"
-            f"{change_type} بنسبة {change:.2%}\nتم التحديث عبر CryptoShip 🚢"
-        )
-        send_message(message)
-        save_last_price(current_price)
-        return "✅ Sent Updated Price"
-    else:
-        return "⏳ لا تغيير ملحوظ في السعر."
+    print("✅ Bot is listening for Cryptohopper messages...")
+    updater.start_polling()
+    updater.idle()
 
 if __name__ == '__main__':
-    port = int(os.environ.get('PORT', 10000))  # يستخدم منفذ Render
-    app.run(host='0.0.0.0', port=port)
+    main()
