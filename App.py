@@ -1,17 +1,16 @@
 from flask import Flask
-from hopper_bot import run_bot
+from main import run_bot
 
 app = Flask(__name__)
 
-@app.route("/")
+@app.route('/')
 def home():
-    return "✅ Hopper bot is online."
+    return "✅ Hopper bot is running."
 
-@app.route("/run")
+@app.route('/run')
 def run():
     result = run_bot()
     return f"<pre>{result}</pre>"
 
-
-if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=10000)
+if __name__ == '__main__':
+    app.run(host='0.0.0.0', port=10000)
