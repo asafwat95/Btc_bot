@@ -45,6 +45,7 @@ def save_last_id(trade_id):
     c.execute("UPDATE state SET value = ? WHERE key = ?", (str(trade_id), 'last_id'))
     conn.commit()
     conn.close()
+    print(f"[DEBUG] ✅ Saved last_id: {trade_id}")
 
 # إرسال الرسالة على تيليجرام
 def send_telegram(msg):
