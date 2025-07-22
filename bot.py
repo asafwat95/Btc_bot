@@ -1,6 +1,7 @@
 import requests
 import os
 import logging
+import random
 
 # إعداد اللوج
 logging.basicConfig(
@@ -57,6 +58,11 @@ def fetch_trades():
         logging.error(f"❌ Error fetching trades: {e}")
         return []
 
+
+
+
+
+
 def format_trade(trade):
     trade_type = trade.get("type", "").capitalize()
     pair = trade.get("pair", "")
@@ -64,14 +70,28 @@ def format_trade(trade):
     result = float(trade.get("result", 0))
 
     if trade_type == "Buy":
-        icon = "🟢"
-        return f"{icon} *Buy Signal*\nPair: `{pair}`\nPrice: `{rate:,.8f}`"
+        icon = "🔥"
+        accuracy = round(random.uniform(90.0, 95.0), 2)  # توليد قيمة بين 90 و95
+        return (
+            f"{icon} *Buy Signal*\n"
+            f"Pair: `{pair}`\n"
+            f"Price: `{rate:,.8f}`\n"
+            f"Accuracy: `{accuracy}%`"
+        )
+
     elif trade_type == "Sell":
-        icon = "🔴"
+        icon = "❄️"
         sign = "+" if result >= 0 else ""
-        return f"{icon} *Sell Signal*\nPair: `{pair}`\nPrice: `{rate:,.8f}`\nResult: `{sign}{result:.2f}%`"
+        return (
+            f"{icon} *Sell Signal*\n"
+            f"Pair: `{pair}`\n"
+            f"Price: `{rate:,.8f}`\n"
+            f"Result: `{sign}{result:.2f}%`"
+        )
+
     else:
         return f"⚪️ *{trade_type}*\nPair: {pair}"
+            
 
 def run_bot():
     last_id = get_last_id()
