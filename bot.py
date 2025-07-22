@@ -38,13 +38,6 @@ def get_last_id():
     conn.close()
     return result[0] if result else None
 
-# حفظ آخر trade_id
-def save_last_id(trade_id):
-    conn = sqlite3.connect(DB_FILE)
-    c = conn.cursor()
-    c.execute("UPDATE state SET value = ? WHERE key = ?", (str(trade_id), 'last_id'))
-    conn.commit()
-    conn.close()
     def save_last_id(trade_id):
     conn = sqlite3.connect(DB_FILE)
     c = conn.cursor()
