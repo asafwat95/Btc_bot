@@ -4,10 +4,7 @@ import logging
 import sqlite3
 
 # إعداد اللوج
-logging.basicConfig(
-    filename="bot.log",
-    level=logging.INFO,
-    format="%(asctime)s - %(levelname)s - %(message)s"
+
 )
 
 # إعداد البيئة
@@ -17,6 +14,10 @@ TELEGRAM_BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN")
 TELEGRAM_CHAT_ID = os.environ.get("TELEGRAM_CHAT_ID")
 API_URL = f"https://api.cryptohopper.com/v1/hopper/{HOPPER_ID}/trade"
 
+logging.basicConfig(
+    filename="bot.log",
+    level=logging.INFO,
+    format="%(asctime)s - %(levelname)s - %(message)s"
 # اسم قاعدة البيانات
 DB_FILE = "bot_data.db"
 
