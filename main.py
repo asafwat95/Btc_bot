@@ -1,5 +1,5 @@
 from flask import Flask
-from app import run_bot
+from App import run_bot
 
 app = Flask(__name__)
 
