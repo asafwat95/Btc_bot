@@ -47,6 +47,11 @@ def save_last_id(trade_id):
     conn.close()
     print(f"[DEBUG] ✅ Saved last_id: {trade_id}")
 
+def send_last_id_telegram():
+    last_id = get_last_id()
+    msg = f"📥 Current last_id in DB: `{last_id}`"
+    send_telegram(msg)
+
 # إرسال الرسالة على تيليجرام
 def send_telegram(msg):
     url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
