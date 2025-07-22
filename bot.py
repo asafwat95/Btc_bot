@@ -4,7 +4,10 @@ import logging
 import sqlite3
 
 # إعداد اللوج
-
+logging.basicConfig(
+    filename="bot.log",
+    level=logging.INFO,
+    format="%(asctime)s - %(levelname)s - %(message)s"
 )
 
 # إعداد البيئة
@@ -14,10 +17,6 @@ TELEGRAM_BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN")
 TELEGRAM_CHAT_ID = os.environ.get("TELEGRAM_CHAT_ID")
 API_URL = f"https://api.cryptohopper.com/v1/hopper/{HOPPER_ID}/trade"
 
-logging.basicConfig(
-    filename="bot.log",
-    level=logging.INFO,
-    format="%(asctime)s - %(levelname)s - %(message)s"
 # اسم قاعدة البيانات
 DB_FILE = "bot_data.db"
 
@@ -39,13 +38,13 @@ def get_last_id():
     conn.close()
     return result[0] if result else None
 
-    def save_last_id(trade_id):
+# حفظ آخر trade_id
+def save_last_id(trade_id):
     conn = sqlite3.connect(DB_FILE)
     c = conn.cursor()
     c.execute("UPDATE state SET value = ? WHERE key = ?", (str(trade_id), 'last_id'))
     conn.commit()
     conn.close()
-    print(f"[DEBUG] ✅ Saved last_id: {trade_id}")
 
 # إرسال الرسالة على تيليجرام
 def send_telegram(msg):
