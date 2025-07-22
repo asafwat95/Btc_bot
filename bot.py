@@ -1,7 +1,7 @@
 import requests
 import os
 import logging
-import random
+import sqlite3
 
 # إعداد اللوج
 logging.basicConfig(
@@ -10,26 +10,43 @@ logging.basicConfig(
     format="%(asctime)s - %(levelname)s - %(message)s"
 )
 
-# بيئة التشغيل
+# إعداد البيئة
 HOPPER_ID = os.environ.get("HOPPER_ID")
 ACCESS_TOKEN = os.environ.get("ACCESS_TOKEN")
 TELEGRAM_BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN")
 TELEGRAM_CHAT_ID = os.environ.get("TELEGRAM_CHAT_ID")
 API_URL = f"https://api.cryptohopper.com/v1/hopper/{HOPPER_ID}/trade"
-LAST_ID_FILE = "last_id.txt"
 
+# اسم قاعدة البيانات
+DB_FILE = "bot_data.db"
 
+# تهيئة قاعدة البيانات
+def init_db():
+    conn = sqlite3.connect(DB_FILE)
+    c = conn.cursor()
+    c.execute('''CREATE TABLE IF NOT EXISTS state (key TEXT PRIMARY KEY, value TEXT)''')
+    c.execute('''INSERT OR IGNORE INTO state (key, value) VALUES (?, ?)''', ('last_id', ''))
+    conn.commit()
+    conn.close()
+
+# الحصول على آخر trade_id
 def get_last_id():
-    try:
-        with open(LAST_ID_FILE, "r") as f:
-            return f.read().strip()
-    except FileNotFoundError:
-        return None
+    conn = sqlite3.connect(DB_FILE)
+    c = conn.cursor()
+    c.execute("SELECT value FROM state WHERE key = ?", ('last_id',))
+    result = c.fetchone()
+    conn.close()
+    return result[0] if result else None
 
+# حفظ آخر trade_id
 def save_last_id(trade_id):
-    with open(LAST_ID_FILE, "w") as f:
-        f.write(str(trade_id))
+    conn = sqlite3.connect(DB_FILE)
+    c = conn.cursor()
+    c.execute("UPDATE state SET value = ? WHERE key = ?", (str(trade_id), 'last_id'))
+    conn.commit()
+    conn.close()
 
+# إرسال الرسالة على تيليجرام
 def send_telegram(msg):
     url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
     payload = {
@@ -44,6 +61,7 @@ def send_telegram(msg):
     except Exception as e:
         logging.error(f"❌ Telegram error: {e}")
 
+# جلب التريدات من CryptoHopper
 def fetch_trades():
     headers = {
         "access-token": ACCESS_TOKEN,
@@ -58,11 +76,7 @@ def fetch_trades():
         logging.error(f"❌ Error fetching trades: {e}")
         return []
 
-
-
-
-
-
+# تنسيق الرسالة
 def format_trade(trade):
     trade_type = trade.get("type", "").capitalize()
     pair = trade.get("pair", "")
@@ -70,30 +84,18 @@ def format_trade(trade):
     result = float(trade.get("result", 0))
 
     if trade_type == "Buy":
-        icon = "🔥"
-        accuracy = round(random.uniform(90.0, 95.0), 2)  # توليد قيمة بين 90 و95
-        return (
-            f"{icon} *Buy Signal*\n"
-            f"Pair: `{pair}`\n"
-            f"Price: `{rate:,.8f}`\n"
-            f"Accuracy: `{accuracy}%`"
-        )
-
+        icon = "🟢"
+        return f"{icon} *Buy Signal*\nPair: `{pair}`\nPrice: `{rate:,.8f}`"
     elif trade_type == "Sell":
-        icon = "❄️"
+        icon = "🔴"
         sign = "+" if result >= 0 else ""
-        return (
-            f"{icon} *Sell Signal*\n"
-            f"Pair: `{pair}`\n"
-            f"Price: `{rate:,.8f}`\n"
-            f"Result: `{sign}{result:.2f}%`"
-        )
-
+        return f"{icon} *Sell Signal*\nPair: `{pair}`\nPrice: `{rate:,.8f}`\nResult: `{sign}{result:.2f}%`"
     else:
         return f"⚪️ *{trade_type}*\nPair: {pair}"
-            
 
+# تشغيل البوت
 def run_bot():
+    init_db()
     last_id = get_last_id()
     trades = fetch_trades()
 
