@@ -7,8 +7,8 @@ from flask import Flask
 # --- Configuration ---
 HOPPER_ID = os.environ.get("HOPPER_ID")
 ACCESS_TOKEN = os.environ.get("ACCESS_TOKEN")
-BOT_TOKEN = os.environ.get("BOT_TOKEN")
-CHAT_ID = os.environ.get("CHAT_ID")  # قناة أو مستخدم
+BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN")
+CHAT_ID = os.environ.get("TELEGRAM_CHAT_ID")  # قناة أو مستخدم
 
 API_BASE_URL = "https://api.cryptohopper.com/v1"
 LAST_TRADE_ID_FILE = "last_trade_id.txt"
