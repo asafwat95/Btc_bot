@@ -17,12 +17,9 @@ API_BASE_URL = "https://api.cryptohopper.com/v1"
 LAST_TRADE_ID_FILE = "last_trade_id.txt"
 TRADE_LOG_FILE = "trades_log.txt"
 
-drive = authenticate()
-
 # --- File Storage Functions ---
 def get_last_trade_id():
     try:
-        download_file(drive, LAST_TRADE_ID_FILE)
         with open(LAST_TRADE_ID_FILE, 'r') as f:
             return f.read().strip()
     except FileNotFoundError:
@@ -31,20 +28,16 @@ def get_last_trade_id():
 def save_last_trade_id(trade_id):
     with open(LAST_TRADE_ID_FILE, 'w') as f:
         f.write(str(trade_id))
-    upload_file(drive, LAST_TRADE_ID_FILE)
 
 def log_trade(message):
     timestamp = datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S UTC")
     try:
-        download_file(drive, TRADE_LOG_FILE)  # حمّل الملف قبل التعديل
-    except:
-        pass  # تجاهل لو مش موجود أول مرة
-
-    with open(TRADE_LOG_FILE, 'a') as f:
-        f.write(f"--- {timestamp} ---\n")
-        f.write(message + "\n\n")
-
-    upload_file(drive, TRADE_LOG_FILE)
+        with open(TRADE_LOG_FILE, 'a') as f:
+            f.write(f"--- {timestamp} ---\n")
+            f.write(message + "\n\n")
+        print("✅ Trade successfully logged")
+    except Exception as e:
+        print(f"❌ Failed to log trade: {e}")
 
 # --- Telegram Function ---
 def send_to_telegram(message):
@@ -74,7 +67,7 @@ def fetch_latest_trade():
     }
 
     params = {
-        "limit": 20
+        "limit": 1
     }
 
     try:
@@ -141,6 +134,11 @@ def home():
 
 @app.route('/check')
 def run_check():
+    # Connect to Google Drive and fetch latest files
+    drive = authenticate()
+    download_file(drive, LAST_TRADE_ID_FILE)
+    download_file(drive, TRADE_LOG_FILE)
+
     last_known_id = get_last_trade_id()
     latest_trade = fetch_latest_trade()
 
@@ -152,6 +150,11 @@ def run_check():
             log_trade(formatted_message)
             save_last_trade_id(latest_id)
             send_to_telegram(formatted_message)
+
+            # Upload updated files to Google Drive
+            upload_file(drive, LAST_TRADE_ID_FILE)
+            upload_file(drive, TRADE_LOG_FILE)
+
             return "🆕 New trade logged and sent to Telegram"
         else:
             return "⏸️ No new trade"
