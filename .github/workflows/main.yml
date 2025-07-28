@@ -23,11 +23,23 @@ jobs:
 
       - name: Install dependencies
         run: |
-          pip install requests google-cloud-storage
+          pip install requests
+          pip install pydrive2
+
+      - name: Save client_secrets.json
+        run: |
+          echo "${{ secrets.CLIENT_SECRETS_JSON }}" > client_secrets.json
 
       - name: Run script
         env:
           HOPPER_ID: ${{ secrets.HOPPER_ID }}
           ACCESS_TOKEN: ${{ secrets.ACCESS_TOKEN }}
-          GCP_CREDENTIALS_JSON: ${{ secrets.GCP_CREDENTIALS_JSON }}
         run: python script.py
+
+      - name: Commit updated files
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add last_trade_id.txt trades_log.txt saved_trade_ids.txt
+          git commit -m "Update trade logs [skip ci]" || echo "No changes"
+          git push
