@@ -1,23 +1,39 @@
-from flask import Flask
-import os
 import requests
+import os
 import random
 from datetime import datetime
-from drive_util import authenticate, download_file, upload_file
+from google.cloud import storage
+import tempfile
 
-app = Flask(__name__)
-
-# --- Configuration ---
+# --- الإعدادات ---
 HOPPER_ID = os.environ.get("HOPPER_ID")
 ACCESS_TOKEN = os.environ.get("ACCESS_TOKEN")
-TELEGRAM_TOKEN = os.environ.get("TELEGRAM_TOKEN")
-TELEGRAM_CHAT_ID = os.environ.get("TELEGRAM_CHAT_ID")
+GCP_CREDENTIALS = os.environ.get("GCP_CREDENTIALS_JSON")
+BUCKET_NAME = "cryptohopper-logs"
 
-API_BASE_URL = "https://api.cryptohopper.com/v1"
 LAST_TRADE_ID_FILE = "last_trade_id.txt"
 TRADE_LOG_FILE = "trades_log.txt"
 
-# --- File Storage Functions ---
+# --- إعداد Google Cloud Storage ---
+def init_gcs_client():
+    if not GCP_CREDENTIALS:
+        raise ValueError("❌ Missing GCP credentials")
+
+    with tempfile.NamedTemporaryFile(mode='w+', delete=False) as temp_cred_file:
+        temp_cred_file.write(GCP_CREDENTIALS)
+        temp_cred_file.flush()
+        return storage.Client.from_service_account_json(temp_cred_file.name)
+
+def upload_to_gcs(local_path, remote_name, client):
+    try:
+        bucket = client.bucket(BUCKET_NAME)
+        blob = bucket.blob(remote_name)
+        blob.upload_from_filename(local_path)
+        print(f"✅ Uploaded {local_path} to GCS as {remote_name}")
+    except Exception as e:
+        print(f"❌ Failed to upload to GCS: {e}")
+
+# --- وظائف قراءة/تخزين محلية ---
 def get_last_trade_id():
     try:
         with open(LAST_TRADE_ID_FILE, 'r') as f:
@@ -35,31 +51,14 @@ def log_trade(message):
         with open(TRADE_LOG_FILE, 'a') as f:
             f.write(f"--- {timestamp} ---\n")
             f.write(message + "\n\n")
-        print("✅ Trade successfully logged")
+        print("✅ Trade successfully logged to trades_log.txt")
     except Exception as e:
         print(f"❌ Failed to log trade: {e}")
 
-# --- Telegram Function ---
-def send_to_telegram(message):
-    try:
-        url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
-        payload = {
-            "chat_id": TELEGRAM_CHAT_ID,
-            "text": message,
-            "parse_mode": "HTML"
-        }
-        response = requests.post(url, data=payload)
-        if response.status_code == 200:
-            print("📤 Message sent to Telegram")
-        else:
-            print(f"❌ Telegram error: {response.text}")
-    except Exception as e:
-        print(f"🔥 Error sending to Telegram: {e}")
-
-# --- API Call ---
+# --- استدعاء آخر عملية تداول ---
 def fetch_latest_trade():
     endpoint = f"/hopper/{HOPPER_ID}/trade"
-    url = API_BASE_URL + endpoint
+    url = "https://api.cryptohopper.com/v1" + endpoint
 
     headers = {
         "accept": "application/json",
@@ -67,7 +66,7 @@ def fetch_latest_trade():
     }
 
     params = {
-        "limit": 1
+        "limit": 20
     }
 
     try:
@@ -78,12 +77,13 @@ def fetch_latest_trade():
         if "data" in data and "trades" in data["data"] and len(data["data"]["trades"]) > 0:
             return data["data"]["trades"][0]
         else:
+            print("No trades found in the response.")
             return None
     except requests.exceptions.RequestException as err:
         print(f"Error fetching trade: {err}")
         return None
 
-# --- Message Formatter ---
+# --- تنسيق الرسالة ---
 def format_trade_message(trade):
     trade_type = trade.get('type', 'N/A').capitalize()
     pair = trade.get('pair', 'N/A')
@@ -101,65 +101,57 @@ def format_trade_message(trade):
             accuracy = random.uniform(90, 95)
 
         return (
-            f"<b>[BUY]</b>\n"
-            f"<b>Pair:</b> {pair}\n"
-            f"<b>Price:</b> {rate:,.8f}\n"
-            f"<b>Accuracy:</b> {float(accuracy):.2f}%\n"
-            f"<b>Amount:</b> {amount}\n"
-            f"<b>Total:</b> {total_usd}"
+            f"[BUY]\n"
+            f"Pair: {pair}\n"
+            f"Price: {rate:,.8f}\n"
+            f"Accuracy: {float(accuracy):.2f}%\n"
+            f"Amount: {amount}\n"
+            f"Total: {total_usd}"
         )
 
     elif trade_type == 'Sell':
         profit_percent = float(trade.get('result', 0))
         profit_sign = "+" if profit_percent >= 0 else ""
         return (
-            f"<b>[SELL]</b>\n"
-            f"<b>Pair:</b> {pair}\n"
-            f"<b>Sell Price:</b> {rate:,.8f}\n"
-            f"<b>Profit/Loss:</b> {profit_sign}{profit_percent:.2f}%\n"
-            f"<b>Total:</b> {total_usd}"
+            f"[SELL]\n"
+            f"Pair: {pair}\n"
+            f"Sell Price: {rate:,.8f}\n"
+            f"Profit/Loss: {profit_sign}{profit_percent:.2f}%\n"
+            f"Total: {total_usd}"
         )
 
     else:
         return (
-            f"<b>[{trade_type.upper()}]</b>\n"
-            f"<b>Pair:</b> {pair}\n"
-            f"<b>Rate:</b> {rate:,.8f}"
+            f"[{trade_type.upper()}]\n"
+            f"Pair: {pair}\n"
+            f"Rate: {rate:,.8f}"
         )
 
-# --- Flask Routes ---
-@app.route('/')
-def home():
-    return "✅ CryptoHopper Monitor is Online"
-
-@app.route('/check')
-def run_check():
-    # Connect to Google Drive and fetch latest files
-    drive = authenticate()
-    download_file(drive, LAST_TRADE_ID_FILE)
-    download_file(drive, TRADE_LOG_FILE)
+# --- تشغيل البرنامج ---
+if __name__ == "__main__":
+    print("📡 Starting CryptoHopper trade check...")
 
     last_known_id = get_last_trade_id()
+    print(f"Last known trade ID: {last_known_id}")
+
     latest_trade = fetch_latest_trade()
 
     if latest_trade:
         latest_id = str(latest_trade['id'])
 
         if latest_id != last_known_id:
+            print(f"🆕 New trade detected: {latest_id}")
             formatted_message = format_trade_message(latest_trade)
             log_trade(formatted_message)
             save_last_trade_id(latest_id)
-            send_to_telegram(formatted_message)
 
-            # Upload updated files to Google Drive
-            upload_file(drive, LAST_TRADE_ID_FILE)
-            upload_file(drive, TRADE_LOG_FILE)
+            print("📤 Uploading files to Google Cloud Storage...")
+            gcs_client = init_gcs_client()
+            upload_to_gcs(LAST_TRADE_ID_FILE, LAST_TRADE_ID_FILE, gcs_client)
+            upload_to_gcs(TRADE_LOG_FILE, TRADE_LOG_FILE, gcs_client)
+            print("✅ Done.")
 
-            return "🆕 New trade logged and sent to Telegram"
         else:
-            return "⏸️ No new trade"
+            print("⏸️ No new trade found.")
     else:
-        return "⚠️ Failed to fetch trade"
-
-if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=10000)
+        print("⚠️ Failed to fetch latest trade.")
